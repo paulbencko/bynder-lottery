@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Place Bet - Bynder Lottery</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1 id="lotteryName">Lottery</h1>
+        
+        <div id="message"></div>
+        
+        <p class="center-content" style="margin-bottom: 20px;">
+            Select <span id="numberCount">5</span> numbers:
+        </p>
+        
+        <div id="numberPicker" class="number-picker"></div>
+        
+        <div class="selected-numbers">
+            Selected: <span id="selectedNumbers">None</span>
+        </div>
+        
+        <div class="center-content">
+            <button id="placeBetBtn" class="btn btn-success" disabled>Place Bet</button>
+        </div>
+        
+        <div class="center-content">
+            <a href="home.html" class="back-link">← Back to Home</a>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const lotteryId = params.get('id');
+        const lotteryType = params.get('type');
+        const lotteryName = params.get('name');
+        const endDate = params.get('endDate');
+        
+        // Number counts per lottery type
+        const NUMBER_COUNTS = {
+            'EURO_MILLONES': { count: 5, max: 50 },
+            'EL_GORDO': { count: 5, max: 54 },
+            'EURO_DREAMS': { count: 6, max: 40 }
+        };
+        
+        let selectedNumbers = [];
+        const config = NUMBER_COUNTS[lotteryType] || { count: 5, max: 50 };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!requireAuth()) return;
+            showLogoutButton();
+            
+            document.getElementById('lotteryName').textContent = decodeURIComponent(lotteryName || 'Lottery');
+            document.getElementById('numberCount').textContent = config.count;
+            
+            // Create number buttons
+            const picker = document.getElementById('numberPicker');
+            for (let i = 1; i <= config.max; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'number-btn';
+                btn.textContent = i;
+                btn.onclick = () => toggleNumber(i, btn);
+                picker.appendChild(btn);
+            }
+        });
+        
+        function toggleNumber(num, btn) {
+            const index = selectedNumbers.indexOf(num);
+            if (index > -1) {
+                selectedNumbers.splice(index, 1);
+                btn.classList.remove('selected');
+            } else if (selectedNumbers.length < config.count) {
+                selectedNumbers.push(num);
+                btn.classList.add('selected');
+            }
+            updateSelectedDisplay();
+        }
+        
+        function updateSelectedDisplay() {
+            const display = document.getElementById('selectedNumbers');
+            const placeBetBtn = document.getElementById('placeBetBtn');
+            
+            if (selectedNumbers.length === 0) {
+                display.textContent = 'None';
+            } else {
+                display.textContent = selectedNumbers.sort((a, b) => a - b).join(', ');
+            }
+            
+            placeBetBtn.disabled = selectedNumbers.length !== config.count;
+        }
+        
+        document.getElementById('placeBetBtn').addEventListener('click', async () => {
+            const messageEl = document.getElementById('message');
+            messageEl.innerHTML = '<p class="message info">Placing bet...</p>';
+            
+            const result = await placeBet(lotteryId, lotteryType, decodeURIComponent(lotteryName), selectedNumbers);
+            
+            if (result.success) {
+                messageEl.innerHTML = `<p class="message success">${result.message}</p>`;
+                setTimeout(() => {
+                    window.location.href = 'home.html';
+                }, 2000);
+            } else {
+                messageEl.innerHTML = `<p class="message error">${result.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

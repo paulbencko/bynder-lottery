@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bynder Lottery</title>
+    <link rel="stylesheet" href="frontend/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Bynder Lottery</h1>
+        
+        <div class="lotteries-section">
+            <div id="lotteries" class="lotteries-row"></div>
+        </div>
+
+        <div class="auth-buttons">
+            <button onclick="location.href='frontend/check.html'" class="btn btn-success">Check Bet</button>
+            <button onclick="location.href='frontend/register.html'" class="btn btn-primary">Register</button>
+            <button onclick="location.href='frontend/login.html'" class="btn btn-secondary">Login</button>
+        </div>
+    </div>
+
+    <script src="frontend/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLotteries('lotteries', true);
+        });
+    </script>
+</body>
+</html>

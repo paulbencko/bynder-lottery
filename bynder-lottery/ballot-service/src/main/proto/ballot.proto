@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.paul.grpc.ballot";
+
+package ballot;
+
+service BallotService {
+  rpc CreateBallot(CreateBallotRequest) returns (CreateBallotResponse);
+  rpc GetBallotsByParticipant(GetBallotsByParticipantRequest) returns (GetBallotsByParticipantResponse);
+}
+
+message CreateBallotRequest {
+  int64 participant_id = 1;
+  int64 lottery_id = 2;
+  string lottery_type = 3;
+  string lottery_name = 4;
+  repeated int32 numbers = 5;
+}
+
+message CreateBallotResponse {
+  string message = 2;
+  int64 ballot_id = 3;
+}
+
+message GetBallotsByParticipantRequest {
+  int64 participant_id = 1;
+}
+
+message GetBallotsByParticipantResponse {
+  repeated BallotInfo ballots = 1;
+}
+
+message BallotInfo {
+  int64 id = 1;
+  int64 participant_id = 2;
+  int64 lottery_id = 3;
+  string lottery_type = 4;
+  string lottery_name = 5;
+  repeated int32 numbers = 6;
+  string created_at = 7;
+  string prize = 8;
+}

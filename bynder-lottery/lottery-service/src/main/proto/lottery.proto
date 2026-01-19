@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.paul.grpc.lottery";
+
+package lottery;
+
+service LotteryService {
+  rpc GetOpenLotteries(GetOpenLotteriesRequest) returns (GetOpenLotteriesResponse);
+  rpc CheckBallot(CheckBallotRequest) returns (CheckBallotResponse);
+}
+
+message GetOpenLotteriesRequest {
+}
+
+message GetOpenLotteriesResponse {
+  repeated LotteryInfo lotteries = 1;
+}
+
+message LotteryInfo {
+  int64 id = 1;
+  string name = 2;
+  string lottery_type = 3;
+  string start_date = 4;
+  string end_date = 5;
+}
+
+message CheckBallotRequest {
+  string lottery_type = 1;
+  string end_date = 2;
+  repeated int32 ballot_numbers = 3;
+}
+
+message CheckBallotResponse {
+  string message = 2;
+  string prize = 3;
+}

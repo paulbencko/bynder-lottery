@@ -1,0 +1,120 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: lottery-database
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: lottery-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  participant-service:
+    build:
+      context: ../participant-service
+      dockerfile: Dockerfile
+    container_name: lottery-participant-service
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/participant_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+  ballot-service:
+    build:
+      context: ../ballot-service
+      dockerfile: Dockerfile
+    container_name: lottery-ballot-service
+    ports:
+      - "8083:8083"
+      - "9093:9093"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/ballot_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: password
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+  lottery-service:
+    build:
+      context: ../lottery-service
+      dockerfile: Dockerfile
+    container_name: lottery-lottery-service
+    ports:
+      - "8082:8082"
+      - "9092:9092"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/lottery_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: password
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+  gateway-service:
+    build:
+      context: ../gateway-service
+      dockerfile: Dockerfile
+    container_name: lottery-gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      GRPC_CLIENT_PARTICIPANT_SERVICE_ADDRESS: static://participant-service:9091
+      GRPC_CLIENT_PARTICIPANT_SERVICE_NEGOTIATION_TYPE: plaintext
+      GRPC_CLIENT_LOTTERY_SERVICE_ADDRESS: static://lottery-service:9092
+      GRPC_CLIENT_LOTTERY_SERVICE_NEGOTIATION_TYPE: plaintext
+      GRPC_CLIENT_BALLOT_SERVICE_ADDRESS: static://ballot-service:9093
+      GRPC_CLIENT_BALLOT_SERVICE_NEGOTIATION_TYPE: plaintext
+    depends_on:
+      - participant-service
+      - lottery-service
+      - ballot-service
+    restart: on-failure
+
+volumes:
+  pgdata:

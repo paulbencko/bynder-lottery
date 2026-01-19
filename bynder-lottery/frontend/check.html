@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Bet - Bynder Lottery</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Check Your Bet</h1>
+        
+        <div class="form-container wide">
+            <div class="form-group">
+                <label for="lotteryType">Lottery</label>
+                <select id="lotteryType" class="form-select">
+                    <option value="">Select a lottery...</option>
+                    <option value="EURO_MILLONES">Euro Millones</option>
+                    <option value="EL_GORDO">El Gordo</option>
+                    <option value="EURO_DREAMS">Euro Dreams</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="lotteryDate">Draw Date</label>
+                <input type="date" id="lotteryDate" class="form-input">
+            </div>
+            
+            <div id="numberPickerSection" style="display: none;">
+                <p class="center-content" style="margin: 20px 0;">
+                    Select your <span id="numberCount">5</span> numbers:
+                </p>
+                <div id="numberPicker" class="number-picker"></div>
+                
+                <div class="selected-numbers">
+                    Selected: <span id="selectedNumbers">None</span>
+                </div>
+            </div>
+            
+            <div id="message"></div>
+            
+            <div class="form-actions">
+                <button id="checkBtn" class="btn btn-success" disabled>Check Result</button>
+            </div>
+        </div>
+        
+        <div class="center-content">
+            <a href="../index.html" class="back-link" id="backLink">← Back</a>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const NUMBER_COUNTS = {
+            'EURO_MILLONES': { count: 5, max: 50 },
+            'EL_GORDO': { count: 5, max: 54 },
+            'EURO_DREAMS': { count: 6, max: 40 }
+        };
+        
+        let selectedNumbers = [];
+        let currentConfig = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isLoggedIn()) {
+                showTopButtons({ hideCheckBet: true });
+                document.getElementById('backLink').href = 'home.html';
+                document.getElementById('backLink').textContent = '← Back to Home';
+            } else {
+                showGuestButtons();
+            }
+            
+            document.getElementById('lotteryDate').valueAsDate = new Date();
+        });
+        
+        document.getElementById('lotteryType').addEventListener('change', (e) => {
+            const type = e.target.value;
+            const section = document.getElementById('numberPickerSection');
+            const picker = document.getElementById('numberPicker');
+            
+            selectedNumbers = [];
+            picker.innerHTML = '';
+            updateSelectedDisplay();
+            
+            if (type && NUMBER_COUNTS[type]) {
+                currentConfig = NUMBER_COUNTS[type];
+                document.getElementById('numberCount').textContent = currentConfig.count;
+                
+                // Create number buttons
+                for (let i = 1; i <= currentConfig.max; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'number-btn';
+                    btn.textContent = i;
+                    btn.onclick = () => toggleNumber(i, btn);
+                    picker.appendChild(btn);
+                }
+                
+                section.style.display = 'block';
+            } else {
+                currentConfig = null;
+                section.style.display = 'none';
+            }
+        });
+        
+        function toggleNumber(num, btn) {
+            const index = selectedNumbers.indexOf(num);
+            if (index > -1) {
+                selectedNumbers.splice(index, 1);
+                btn.classList.remove('selected');
+            } else if (currentConfig && selectedNumbers.length < currentConfig.count) {
+                selectedNumbers.push(num);
+                btn.classList.add('selected');
+            }
+            updateSelectedDisplay();
+        }
+        
+        function updateSelectedDisplay() {
+            const display = document.getElementById('selectedNumbers');
+            const checkBtn = document.getElementById('checkBtn');
+            
+            if (selectedNumbers.length === 0) {
+                display.textContent = 'None';
+            } else {
+                display.textContent = selectedNumbers.sort((a, b) => a - b).join(', ');
+            }
+            
+            checkBtn.disabled = !currentConfig || selectedNumbers.length !== currentConfig.count;
+        }
+        
+        document.getElementById('checkBtn').addEventListener('click', async () => {
+            const lotteryType = document.getElementById('lotteryType').value;
+            const endDate = document.getElementById('lotteryDate').value;
+            const messageEl = document.getElementById('message');
+            
+            if (!lotteryType || !endDate || selectedNumbers.length !== currentConfig.count) {
+                messageEl.innerHTML = '<p class="message error">Please fill in all fields</p>';
+                return;
+            }
+            
+            messageEl.innerHTML = '<p class="message info">Checking...</p>';
+            
+            const result = await checkBet(lotteryType, endDate, selectedNumbers);
+            
+            if (result.success) {
+                const prizeDisplay = formatPrize(result.prize);
+                messageEl.innerHTML = `<p class="message ${prizeDisplay.class}">${prizeDisplay.text}</p>`;
+            } else {
+                messageEl.innerHTML = `<p class="message error">${result.message}</p>`;
+            }
+        });
+        
+        function formatPrize(prize) {
+            switch (prize) {
+                case 'FIRST_PRIZE':
+                    return { text: '🎉 JACKPOT! All numbers match!', class: 'success' };
+                case 'SECOND_PRIZE':
+                    return { text: '🥈 Second Prize! All but 1 match!', class: 'success' };
+                case 'THIRD_PRIZE':
+                    return { text: '🥉 Third Prize! All but 2 match!', class: 'success' };
+                case 'NO_PRIZE':
+                    return { text: 'No prize this time. Better luck next time!', class: 'info' };
+                default:
+                    return { text: `Result: ${prize}`, class: 'info' };
+            }
+        }
+    </script>
+</body>
+</html>

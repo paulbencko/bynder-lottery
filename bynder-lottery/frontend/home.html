@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account - Bynder Lottery</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome <span id="userName"></span>!</h1>
+        
+        <h2>Place a Bet</h2>
+        <div class="lotteries-section">
+            <div id="lotteries" class="lotteries-row">
+                <p>Loading lotteries...</p>
+            </div>
+        </div>
+
+        <h2>My Bets</h2>
+        <div id="bets" class="bet-list">
+            <p>Loading your bets...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        function getPrizeClass(prize) {
+            switch (prize) {
+                case 'FIRST_PRIZE': return 'first';
+                case 'SECOND_PRIZE': return 'second';
+                case 'THIRD_PRIZE': return 'third';
+                case 'NO_PRIZE': return 'none';
+                default: return 'pending';
+            }
+        }
+
+        function formatPrizeName(prize) {
+            switch (prize) {
+                case 'FIRST_PRIZE': return '🎉 Jackpot!';
+                case 'SECOND_PRIZE': return '🥈 Second Prize';
+                case 'THIRD_PRIZE': return '🥉 Third Prize';
+                case 'NO_PRIZE': return 'No Prize';
+                default: return 'Pending';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!requireAuth()) return;
+            showTopButtons({ hideHome: true });
+            
+            const user = getUser();
+            document.getElementById('userName').textContent = user.name || user.email;
+            
+            loadLotteries('lotteries', false);
+            
+            const betsContainer = document.getElementById('bets');
+            const result = await getMyBets();
+            
+            if (result.success && result.data.length > 0) {
+                betsContainer.innerHTML = '';
+                result.data.forEach(bet => {
+                    const item = document.createElement('div');
+                    item.className = 'bet-item';
+                    const dateStr = formatDate(bet.createdAt);
+                    const prizeHtml = bet.prize ? `<div class="bet-prize ${getPrizeClass(bet.prize)}">${formatPrizeName(bet.prize)}</div>` : '<div class="bet-prize pending">Pending</div>';
+                    item.innerHTML = `
+                        <div class="bet-content">
+                            <div class="bet-info">
+                                <h4>${bet.lotteryName} - ${dateStr}</h4>
+                                <div class="bet-numbers">
+                                    ${bet.numbers.map(n => `<span class="bet-number">${n}</span>`).join('')}
+                                </div>
+                            </div>
+                            ${prizeHtml}
+                        </div>
+                    `;
+                    betsContainer.appendChild(item);
+                });
+            } else {
+                betsContainer.innerHTML = '<p class="message info">No bets yet. Place your first bet!</p>';
+            }
+        });
+    </script>
+</body>
+</html>
